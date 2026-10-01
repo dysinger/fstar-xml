@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+
+# nix build results (result symlinks)
+result
+result-*
+
+# Makefile build output (check reads/writes under out/)
+out/
+
+# F* `.checked` cache directory (hand-run `fstar.exe --cache_checked_modules`
+# without `--odir` drops the cache in cwd/ `cache/`).
+cache/
+
+# F* `.checked` cache, in case `fstar.exe` is run by hand without `--odir`.
+*.checked
+*.krml
+
+# C compiler artifacts, in case `make` or a hand-run compile drops them in cwd.
+*.o
+
+# Empty scratch dirs
+runtime/
+
+# SMT query dumps from `fstar.exe --log_queries` (hang diagnosis)
+queries-*.smt2
