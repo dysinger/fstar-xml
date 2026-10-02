@@ -1,6 +1,7 @@
 (* Copyright 2026 Department of Code LLC.
    SPDX-License-Identifier: AGPL-3.0-or-later *)
 
+
 (**
 Data.XML.Codec — XML 1.0 bidirectional parser/printer (record codec).
 
@@ -36,6 +37,7 @@ Zero admits / zero magic.
 *)
 module Data.XML.Codec
 
+
 open Data.Codec
 open Data.Text.Codec
 open Data.XML.Types
@@ -47,8 +49,10 @@ open FStar.Char
 open FStar.UInt8
 open FStar.List.Tot
 
+
 module U8 = FStar.UInt8
 module Seq = FStar.Seq
+
 
 (** A codec that rejects every input (fstar-proofs §23).
 
@@ -67,9 +71,11 @@ let reject (#a:Type) : codec a = {
   dec_consumed_bound = (fun s -> ());
 }
 
+
 (* ========================================================================
    Bounded greedy-list combinator (delimiter-terminated).
    ======================================================================== *)
+
 
 (** Decode zero or more elements, bounded by [max], stopping when the element
     codec [c] fails (the delimiter).  The bounded-greedy analogue of the
@@ -85,19 +91,23 @@ let rec greedy_dec_list (#a:Type) (c: codec a) (max: nat) (s: byte_seq)
           | Inl e -> Inl e
           | Inr (tl, m) -> Inr (v :: tl, n + m)
 
+
 (** Encode a list by concatenation. *)
 let rec greedy_enc_list (#a:Type) (c: codec a) (vs: list a) : Tot byte_seq (decreases vs) =
   match vs with
   | [] -> Seq.empty
   | v :: tl -> Seq.append (c.enc v) (greedy_enc_list c tl)
 
+
 (** Every element is well-formed. *)
 let rec greedy_wfcv_list (#a:Type) (c: codec a) (vs: list a) : Tot bool (decreases vs) =
   match vs with | [] -> true | v :: tl -> c.wfcv v && greedy_wfcv_list c tl
 
+
 (** Well-formed proposition for the list. *)
 let rec greedy_wfcv_prop_list (#a:Type) (c: codec a) (vs: list a) : Tot prop (decreases vs) =
   match vs with | [] -> True | v :: tl -> c.wfcv_prop v /\ greedy_wfcv_prop_list c tl
+
 
 (** Suffix condition chained element-wise. *)
 let rec greedy_rest_cond_list (#a:Type) (c: codec a) (vs: list a) (r: byte_seq) : Tot prop (decreases vs) =
@@ -105,11 +115,13 @@ let rec greedy_rest_cond_list (#a:Type) (c: codec a) (vs: list a) (r: byte_seq) 
   | [] -> True
   | v :: tl -> c.rest_cond v (greedy_enc_list c tl `Seq.append` r) /\ greedy_rest_cond_list c tl r
 
+
 (** Well-formedness carries the length bound, so the roundtrip lemma's
     requires matches [custom]'s [roundtrip_custom] signature exactly. *)
 unfold
 let greedy_wfcv (#a:Type) (c: codec a) (max: nat) (vs: list a) : bool =
   List.Tot.length vs <= max && greedy_wfcv_list c vs
+
 
 (** The complete greedy-list [rest_cond]: the element-wise chain PLUS the
     trailing clause that the suffix does not begin another element.  Marked
@@ -117,6 +129,7 @@ let greedy_wfcv (#a:Type) (c: codec a) (max: nat) (vs: list a) : bool =
 unfold
 let greedy_rest_cond (#a:Type) (c: codec a) (vs: list a) (r: byte_seq) : prop =
   greedy_rest_cond_list c vs r /\ (match c.dec r with Inl _ -> True | Inr _ -> False)
+
 
 (** Roundtrip for the bounded greedy list: when the suffix does not begin
     another element ([c.dec r] is [Inl]), the list roundtrips. *)
@@ -141,6 +154,7 @@ let rec lemma_greedy_roundtrip (#a:Type) (c: codec a) (max: nat) (vs: list a) (r
       ()
 #pop-options
 
+
 (** Error-position bound for the greedy list decoder. *)
 #push-options "--z3rlimit 200"
 let rec lemma_greedy_dec_err_bound (#a:Type) (c: codec a) (max: nat) (s: byte_seq) : Lemma
@@ -156,6 +170,7 @@ let rec lemma_greedy_dec_err_bound (#a:Type) (c: codec a) (max: nat) (s: byte_se
         else lemma_greedy_dec_err_bound c (max - 1) (Seq.slice s n (Seq.length s))
     end
 #pop-options
+
 
 (** Consumed-count bound for the greedy list decoder. *)
 #push-options "--z3rlimit 200"
@@ -173,6 +188,7 @@ let rec lemma_greedy_dec_consumed_bound (#a:Type) (c: codec a) (max: nat) (s: by
     end
 #pop-options
 
+
 (** [greedy c max] — a delimiter-terminated list codec (zero or more
     elements, bounded by [max]).  The list roundtrip holds when the suffix
     does not begin another element ([c.dec r] = [Inl]). *)
@@ -189,6 +205,7 @@ let greedy (#a:Type) (c: codec a) (max: nat) : codec (list a) =
     (lemma_greedy_dec_consumed_bound c max)
 #pop-options
 
+
 (* ========================================================================
    Resolved character data + attribute value (XML 1.0 §2.4, §3.1, §4.1/§4.6).
 
@@ -201,14 +218,17 @@ let greedy (#a:Type) (c: codec a) (max: nat) : codec (list a) =
    construction.
    ======================================================================== *)
 
+
 (** [chars_to_string] — the [list char] → [string] forward map (the
     [string_of_list] bijection). *)
 let chars_to_string (cs: list FStar.Char.char) : option string =
   Some (FStar.String.string_of_list cs)
 
+
 (** [string_to_chars] — the [string] → [list char] backward map. *)
 let string_to_chars (s: string) : option (list FStar.Char.char) =
   Some (FStar.String.list_of_string s)
+
 
 (** [xml_text_value_codec] — RESOLVED character data: a bounded run of XML
     [Char] productions (literal | entity ref | char ref), each resolved by
@@ -220,6 +240,7 @@ let string_to_chars (s: string) : option (list FStar.Char.char) =
     (XML 1.0 §2.4 CharData, §4.1/§4.6). *)
 let xml_text_value_codec : codec string =
   map_ chars_to_string string_to_chars (greedy text_char xml_max_text_len)
+
 
 (** [attr_text_char] — a resolved attribute-value character: as [text_char],
     except a double quote ([\"], the attribute delimiter) is additionally
@@ -236,6 +257,7 @@ let is_attr_char_literal (b: byte) : bool =
   let v = U8.v b in
   v < 0x80 && v <> 0x3C && v <> 0x26 && v <> 0x22 && is_xml_cp v
 
+
 (** [attr_literal_char] — a single literal attribute character (a valid
     [Char] that is neither [<], [&], nor ["]), mapped to its [char]. *)
 let attr_literal_char : codec char =
@@ -246,6 +268,7 @@ let attr_literal_char : codec char =
       if is_attr_char_literal b then Some b else None)
     (satisfy is_attr_char_literal)
 
+
 (** [attr_text_char] — one attribute text character: a literal OR an
     entity/char reference ([&]-dispatched, prefix-factored per §53/§56). *)
 let attr_text_char : codec char =
@@ -255,6 +278,7 @@ let attr_text_char : codec char =
       if is_attr_char_literal (Data.Codec.char_to_byte c) then Some (Inl c)
       else Some (Inr c))
     (alt attr_literal_char amp_char (fun b -> U8.v b <> 0x26))
+
 
 (** [attr_text_char] rejects a REC [2] control byte ([#x1]) on the attribute
     literal path ([is_attr_char_literal] is now [is_xml_cp]-gated —
@@ -267,6 +291,7 @@ let lemma_attr_text_char_reject_control () : Lemma
     ()
 #pop-options
 
+
 (** [xml_attr_value_codec] — a RESOLVED attribute value (XML 1.0 §3.1
     production [10] AttValue): a run of [Char] productions where a ["] is
     additionally escaped as [&quot;].  The run may be EMPTY ([greedy] admits
@@ -274,9 +299,11 @@ let lemma_attr_text_char_reject_control () : Lemma
 let xml_attr_value_codec : codec string =
   map_ chars_to_string string_to_chars (greedy attr_text_char xml_max_attr_len)
 
+
 (* ========================================================================
    Name codec.
    ======================================================================== *)
+
 
 (** [xml_name_codec] — an XML Name as an [xml_name] with [prefix = None].
 
@@ -289,9 +316,11 @@ let xml_name_codec : codec xml_name =
     (fun (n: xml_name) -> Some n.local)
     name_codec
 
+
 (* ========================================================================
    Attribute codec — Name = "value".
    ======================================================================== *)
+
 
 (** [xml_attribute_codec] — Name = "value" (double-quoted, no surrounding
     whitespace).  The value [attr_value] is the resolved attribute-value
@@ -307,6 +336,7 @@ let xml_attribute_codec : codec xml_attribute =
     (product
       xml_name_codec
       (then_drop (byte_val 0x3Duy) attr_value))
+
 
 (** The empty attribute VALUE ([name=""]) roundtrips at the transparent
     [greedy] level (the value portion of [xml_attribute_codec] = [greedy]
@@ -324,10 +354,12 @@ let lemma_empty_attr_value_roundtrip () : Lemma
   = ()
 #pop-options
 
+
 (* ========================================================================
    Attribute list (STag [S] [Attribute] runs; XML 1.0 §3.1 productions
    [40]/[41]).
    ======================================================================== *)
+
 
 (** [ws_unit] — one-or-more XML whitespace as a [codec unit].
 
@@ -341,9 +373,11 @@ let ws_unit : codec unit =
     (fun (_: unit) -> Some " ")
     ws
 
+
 (** One [S] [Attribute]: one-or-more whitespace then an attribute. *)
 let ws_attr : codec xml_attribute =
   then_drop ws_unit xml_attribute_codec
+
 
 (** [xml_attributes_codec] — zero or more attributes, each preceded by
     one-or-more whitespace, terminated when the next byte is not whitespace
@@ -352,10 +386,12 @@ let ws_attr : codec xml_attribute =
 let xml_attributes_codec : codec (list xml_attribute) =
   greedy ws_attr xml_max_depth
 
+
 (* ========================================================================
    Node codec — text | element | comment | CDATA | PI, dispatched on the
    first byte.
    ======================================================================== *)
+
 
 (** [xml_node_body] — the node codec builder, parameterized by the element
     TAIL codec [elem_tail] (an element body starting at the NAME — the
@@ -451,9 +487,11 @@ let xml_node_body (elem_tail: codec xml_element) : codec xml_node =
     (fun (n: xml_node) -> match n with XmlText _ -> Some (Inl n) | _ -> Some (Inr n))
     (alt text_node tagged (fun b -> U8.v b <> 0x3C))
 
+
 (* ========================================================================
    Element codec — the recursive core (fuel-indexed).
    ======================================================================== *)
+
 
 (** [element_tail_map] — the element TAIL forward map: reconstruct an
     [xml_element] from the parsed [open name] + [attrs] + [tail].  The
@@ -471,6 +509,7 @@ let element_tail_map
   | Inr (close_n, kids) ->
     if open_n = close_n then Some { elt_name = open_n; elt_attributes = attrs; elt_children = kids }
     else None
+
 
 (** [xml_element_tail] — the element codec body, parameterized by the element
     TAIL codec [self] for nested children.  Parses/encodes an element STARTING
@@ -520,6 +559,7 @@ let xml_element_tail (self: codec xml_element) : codec xml_element =
       (product attrs_c
         (alt empty_tail paired_tail (fun b -> U8.v b = 0x2F))))
 
+
 (** [element_tail_map] rejects a MISMATCHED end tag (finding m2 / task 3.2):
     a paired element whose close name differs from its open name
     ([<a></b>]) returns [None] from the forward map, which [map_.dec]
@@ -533,6 +573,7 @@ let lemma_element_reject_mismatched_tag () : Lemma
   = assert_norm (element_tail_map (mk_name "a", ([], Inr (mk_name "b", []))) == None)
 #pop-options
 
+
 (** A matched end tag ([<a></a>]) is ACCEPTED by the forward map (the close
     name equals the open name). *)
 #push-options "--z3rlimit 400"
@@ -541,6 +582,7 @@ let lemma_element_accept_matched_tag () : Lemma
   = assert_norm (element_tail_map (mk_name "a", ([], Inr (mk_name "a", [])))
                  == Some { elt_name = mk_name "a"; elt_attributes = []; elt_children = [] })
 #pop-options
+
 
 (* The missing-[S]-before-an-attribute rejection ([<a k="v">]) is enforced
    COMPOSITIONALLY: [xml_attributes_codec] is [greedy ws_attr], and
@@ -553,11 +595,13 @@ let lemma_element_accept_matched_tag () : Lemma
    fstar-proofs §58 it is enforced by the combinator [.roundtrip]/
    [.dec] generically and needs no per-vector [dec] lemma. *)
 
+
 (** [xml_element_tail_codec] — fuel-indexed element BODY codec (from the name,
     no leading `<`).  Nested children use the tail at [fuel - 1]. *)
 let rec xml_element_tail_codec (fuel: nat) : Tot (codec xml_element) (decreases fuel) =
   if fuel = 0 then reject
   else xml_element_tail (xml_element_tail_codec (fuel - 1))
+
 
 (** [xml_element_codec] — fuel-indexed recursive element codec (from `<`).
 
@@ -567,9 +611,11 @@ let xml_element_codec (fuel: nat) : Tot (codec xml_element) =
   if fuel = 0 then reject
   else then_drop (byte_val 0x3Cuy) (xml_element_tail_codec fuel)
 
+
 (* ========================================================================
    Document codec.
    ======================================================================== *)
+
 
 (** [collect_some os] — the [Some] occupants of an [option] list, in order,
     with the [None] entries (whitespace) dropped. *)
@@ -577,6 +623,7 @@ let rec collect_some (#a: Type) (os: list (option a)) : Tot (list a) (decreases 
   match os with
   | [] -> []
   | o :: tl -> match o with Some x -> x :: collect_some tl | None -> collect_some tl
+
 
 (** [prolog_misc] — zero or more [Misc] productions ([27]) as a
     [list xml_node], whitespace dropped.  Built as the bounded [greedy] over
@@ -588,6 +635,7 @@ let prolog_misc : codec (list xml_node) =
     (fun (ns: list xml_node) ->
       Some (List.Tot.map Some ns))
     (greedy misc_opt xml_max_depth)
+
 
 (** [xml_prolog_codec] — the document prolog ([22]): optional declaration,
     then [Misc star], then optional doctype, then [Misc star].
@@ -607,6 +655,7 @@ let xml_prolog_codec : codec xml_prolog =
       (product optional_decl prolog_misc)
       (product optional_doctype prolog_misc))
 
+
 (** [xml_document_codec] — a document: an optional prolog (XML declaration,
     doctype, and misc) followed by a single root element (XML 1.0 [1]).
 
@@ -622,15 +671,19 @@ let xml_document_codec : codec xml_document =
     (fun (doc: xml_document) -> Some (doc.doc_prolog, doc.doc_root))
     (product xml_prolog_codec root_c)
 
+
 (* ========================================================================
    Top-level encode/decode.
    ======================================================================== *)
 
+
 (** Encode a document with the document codec's [.enc]. *)
 let encode_xml (d: xml_document) : byte_seq = xml_document_codec.enc d
 
+
 (** Decode a document with the document codec's [.dec]. *)
 let decode_xml (input: byte_seq) : decode_result xml_document = xml_document_codec.dec input
+
 
 (* ========================================================================
    Concrete example documents (XML 1.0 well-formedness vectors).
@@ -644,16 +697,19 @@ let decode_xml (input: byte_seq) : decode_result xml_document = xml_document_cod
    re-proven here: the general roundtrip lemma already covers them.
    ======================================================================== *)
 
+
 (** An empty document whose root is the empty element [<a/>]. *)
 let example_empty_doc : xml_document =
   { doc_prolog = { prolog_decl = None; prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = []; elt_children = [] } }
+
 
 (** A document whose root is the paired text element [<a>hi</a>]. *)
 let example_text_doc : xml_document =
   { doc_prolog = { prolog_decl = None; prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = [];
                  elt_children = [XmlText "hi"] } }
+
 
 (** A document whose root is the nested element [<div><p>hi</p></div>]. *)
 let example_nested_doc : xml_document =
@@ -663,12 +719,14 @@ let example_nested_doc : xml_document =
                    { elt_name = mk_name "p"; elt_attributes = [];
                      elt_children = [XmlText "hi"] }] } }
 
+
 (** A document whose root carries a single attribute ([<a k="v"/>]). *)
 let example_attr_doc : xml_document =
   { doc_prolog = { prolog_decl = None; prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a";
                  elt_attributes = [{ attr_name = mk_name "k"; attr_value = "v" }];
                  elt_children = [] } }
+
 
 (** A document whose root carries two attributes and text
     ([<a k1="v1" k2="v2">x</a>]). *)
@@ -679,11 +737,13 @@ let example_multi_attr_doc : xml_document =
                                     { attr_name = mk_name "k2"; attr_value = "v2" }];
                  elt_children = [XmlText "x"] } }
 
+
 (** A document whose root carries a comment child ([<a><!--c--></a>]). *)
 let example_comment_doc : xml_document =
   { doc_prolog = { prolog_decl = None; prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = [];
                  elt_children = [XmlComment "c"] } }
+
 
 (** A document whose root carries a CDATA child ([<a><![CDATA[cd]]></a>]). *)
 let example_cdata_doc : xml_document =
@@ -691,11 +751,13 @@ let example_cdata_doc : xml_document =
     doc_root = { elt_name = mk_name "a"; elt_attributes = [];
                  elt_children = [XmlCDATA "cd"] } }
 
+
 (** A document whose root carries a PI child ([<a><?t d?></a>]). *)
 let example_pi_doc : xml_document =
   { doc_prolog = { prolog_decl = None; prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = [];
                  elt_children = [XmlPI "t" "d"] } }
+
 
 (** A document with an XML declaration ([<?xml version="1.0"?><a/>]).  The
     declaration is the OPAQUE canonical text (the [list char] structural view
@@ -705,12 +767,14 @@ let example_decl_doc : xml_document =
                    prolog_doctype = None; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = []; elt_children = [] } }
 
+
 (** A document with an XML declaration and a doctype
     ([<?xml version="1.0"?><!DOCTYPE a><a/>]).  Both are carried OPAQUELY. *)
 let example_decl_doctype_doc : xml_document =
   { doc_prolog = { prolog_decl = Some "<?xml version=\"1.0\"?>";
                    prolog_doctype = Some "<!DOCTYPE a>"; prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = []; elt_children = [] } }
+
 
 (** A document with a doctype carrying an ExternalID
     ([<!DOCTYPE a SYSTEM "x.dtd"><a/>]); the doctype text is opaque. *)
@@ -719,6 +783,7 @@ let example_doctype_extid_doc : xml_document =
                    prolog_doctype = Some "<!DOCTYPE a SYSTEM \"x.dtd\">";
                    prolog_misc = [] };
     doc_root = { elt_name = mk_name "a"; elt_attributes = []; elt_children = [] } }
+
 
 (** A document containing an entity reference ([&amp;] → [&]) and a character
     reference ([&#65;] → [A]) in RESOLVED text, nested two levels deep
@@ -736,3 +801,4 @@ let example_refs_nested_doc : xml_document =
                      elt_children = [XmlElement
                        { elt_name = mk_name "b"; elt_attributes = [];
                          elt_children = [XmlText "X&YAZ"] }] }] } }
+

@@ -1,6 +1,7 @@
 (* Copyright 2026 Department of Code LLC.
    SPDX-License-Identifier: AGPL-3.0-or-later *)
 
+
 (**
 Data.XML.Token — XML 1.0 character codecs and entity references.
 
@@ -26,6 +27,7 @@ deduplicates the entity literal set).
 *)
 module Data.XML.Token
 
+
 open Data.Codec
 open Data.Text.Codec
 open Data.Text.Codec.Chars
@@ -37,7 +39,9 @@ open FStar.Char
 open FStar.UInt8
 open FStar.List.Tot
 
+
 module U8 = FStar.UInt8
+
 
 (** Named constants — single source of truth for XML 1.0 bounds.
 
@@ -45,17 +49,32 @@ module U8 = FStar.UInt8
     large enough that no legitimate document is truncated, finite enough to
     stay terminating and invertible (bounded greedy, fstar-proofs §43). *)
 let xml_max_name_len : nat = 1048576     (* names: 1 Mi chars *)
+
+
+(** [xml_max_attr_len] — the maximum attribute-value length cap (16 Mi chars). *)
 let xml_max_attr_len : nat = 16777216    (* attribute values: 16 Mi chars *)
+
+
+(** [xml_max_text_len] — the maximum text-content length cap (1 Gi chars). *)
 let xml_max_text_len : nat = 1073741824  (* text content: 1 Gi chars *)
+
+
+(** [xml_max_ws_len] — the maximum whitespace-run length cap (1 Mi chars). *)
 let xml_max_ws_len   : nat = 1048576     (* whitespace runs: 1 Mi chars *)
+
+
+(** [xml_max_depth] — the maximum element-nesting fuel (element depth). *)
 let xml_max_depth    : nat = 1024        (* element nesting fuel *)
 
+
 (** Character predicates (ASCII code points < 128), XML 1.0 §2.3. *)
+
 
 (** True iff [c] is an XML whitespace character (space/tab/CR/LF). *)
 let is_xml_ws_char (c: FStar.Char.char) : bool =
   let v = FStar.Char.int_of_char c in
   v = 0x20 || v = 0x09 || v = 0x0D || v = 0x0A
+
 
 (** True iff [cp] is a valid XML 1.0 [Char] code point — production [2].
 
@@ -74,11 +93,13 @@ let is_xml_cp (cp: int) : bool =
   (0xE000 <= cp && cp <= 0xFFFD) ||
   (0x10000 <= cp && cp <= 0x10FFFF)
 
+
 (** True iff [c] is a valid XML 1.0 [Char] character — [is_xml_cp] at the
     [char] level.  Excludes the controls, surrogates, and noncharacters
     (finding M1). *)
 let is_xml_char (c: FStar.Char.char) : bool =
   is_xml_cp (FStar.Char.int_of_char c)
+
 
 (** True iff [c] is a NameStartChar (letter, underscore, colon) — full
     XML 1.0 production [4].
@@ -113,6 +134,7 @@ let is_name_start_char (c: FStar.Char.char) : bool =
   (0xFDF0 <= v && v <= 0xFFFD) ||
   (0x10000 <= v && v <= 0xEFFFF)
 
+
 (** True iff [c] is a NameChar (NameStartChar plus digit, hyphen, dot, and
     the combining/extended ranges) — full XML 1.0 production [4a].
 
@@ -125,6 +147,7 @@ let is_name_char_char (c: FStar.Char.char) : bool =
    (0x300 <= v && v <= 0x36F) ||
    (0x203F <= v && v <= 0x2040))
 
+
 (** A name string is well-formed: non-empty, head is NameStartChar, every
     remaining char is a NameChar, and length ≤ [xml_max_name_len]. *)
 let is_name_string (s: string) : bool =
@@ -134,17 +157,21 @@ let is_name_string (s: string) : bool =
   List.Tot.for_all is_name_char_char (List.Tot.tl chars) &&
   List.Tot.length chars <= xml_max_name_len
 
+
 (** Is [c] an ASCII [x] (0x78) or [X] (0x58)? *)
 let is_ascii_x_or_X (c: FStar.Char.char) : bool =
   let v = FStar.Char.int_of_char c in v = 0x78 || v = 0x58
+
 
 (** Is [c] an ASCII [m] (0x6D) or [M] (0x4D)? *)
 let is_ascii_m_or_M (c: FStar.Char.char) : bool =
   let v = FStar.Char.int_of_char c in v = 0x6D || v = 0x4D
 
+
 (** Is [c] an ASCII [l] (0x6C) or [L] (0x4C)? *)
 let is_ascii_l_or_L (c: FStar.Char.char) : bool =
   let v = FStar.Char.int_of_char c in v = 0x6C || v = 0x4C
+
 
 (** [is_the_xml_target s] — [s] begins with the three-character ASCII sequence
     [xml] (case-insensitive).  The first three characters are [xX], [mM],
@@ -157,6 +184,7 @@ let is_the_xml_target (s: string) : bool =
     (is_ascii_x_or_X x) && (is_ascii_m_or_M m) && (is_ascii_l_or_L l)
   | _ -> false
 
+
 (** [is_pi_target s] — [s] is a valid PI target: a well-formed Name whose
     first three characters are NOT the reserved target [xml] in any of the
     eight case combinations ([xml], [xmL], [xMl], [xML], [Xml], [XmL],
@@ -165,7 +193,9 @@ let is_the_xml_target (s: string) : bool =
 let is_pi_target (s: string) : bool =
   is_name_string s && not (is_the_xml_target s)
 
+
 (** Whitespace *)
+
 
 (** [ws] — one-or-more XML whitespace characters, bounded greedy.
 
@@ -173,7 +203,9 @@ let is_pi_target (s: string) : bool =
     the bound or the first non-whitespace byte (fstar-proofs §43). *)
 let ws : codec string = text_chars xml_max_ws_len is_xml_ws_char
 
+
 (** Name *)
+
 
 (** [name_codec] — a single XML Name (NameStartChar NameChar star),
     full XML 1.0 productions [4]/[4a]/[5] with Unicode names.
@@ -193,6 +225,7 @@ let name_codec : codec string =
     (fun (s: string) -> Some s)
     (utf8_string xml_max_name_len)
 
+
 (** A non-ASCII Name roundtrip (Task 5.2): U+00E9 (LATIN SMALL LETTER E
     WITH ACUTE, [é]) is a NameStartChar in the RFC [4] range [#xD8-#xF6],
     and [é] is a valid XML Name — its UTF-8 encoding ([0xC3; 0xA9]) decodes
@@ -203,6 +236,7 @@ let name_codec : codec string =
       full-Unicode Name predicate accepts a non-ASCII NameStartChar).
     - the [utf8_string] roundtrip ([lemma_utf8_string_roundtrip], already
       0-admit in [Data.Text.Codec.UTF8String]) proves [é] ⇄ [0xC3; 0xA9]. *)
+
 
 (** [é] (U+00E9) is a NameStartChar (and hence a NameChar) — the
     full-Unicode Name predicate accepts a non-ASCII NameStartChar. *)
@@ -216,6 +250,7 @@ let lemma_name_accepts_nonascii () : Lemma
     assert (is_name_char_char c);
     ()
 
+
 (** [é] (U+00E9) roundtrips through the [name_codec]'s UTF-8 layer: its
     UTF-8 bytes [0xC3; 0xA9] decode back to ["é"], consuming 2 bytes. *)
 let lemma_name_nonascii_roundtrip () : Lemma
@@ -224,6 +259,7 @@ let lemma_name_nonascii_roundtrip () : Lemma
       (utf8_string_enc "é" `Seq.append` Seq.empty)
       == Inr ("é", Seq.length (utf8_string_enc "é")))
   = lemma_utf8_string_roundtrip xml_max_name_len "é" Seq.empty
+
 
 (* ========================================================================
    Name rejection lemmas (finding M1 / task 2.1).
@@ -238,17 +274,21 @@ let lemma_name_nonascii_roundtrip () : Lemma
    a leading-digit name, and an interior-whitespace name (productions [4]/[4a]/[5]).
    ======================================================================== *)
 
+
 (** The empty string is not a Name (no [NameStartChar]). *)
 let lemma_name_reject_empty () : Lemma (is_name_string "" == false)
   = assert_norm (is_name_string "" == false)
+
 
 (** A leading digit is not a [NameStartChar] ([1abc] starts with [1]). *)
 let lemma_name_reject_leading_digit () : Lemma (is_name_string "1abc" == false)
   = assert_norm (is_name_string "1abc" == false)
 
+
 (** An interior space is not a [NameChar] ([a b] contains [space]). *)
 let lemma_name_reject_interior_space () : Lemma (is_name_string "a b" == false)
   = assert_norm (is_name_string "a b" == false)
+
 
 (* ========================================================================
    PI-target lemmas (finding P1 / task 2.1).
@@ -259,12 +299,14 @@ let lemma_name_reject_interior_space () : Lemma (is_name_string "a b" == false)
    cross-module (same reason as the [name_codec] gate above).
    ======================================================================== *)
 
+
 (** An ordinary PI target ([pi]) is accepted as a target: it is a Name and
     not the reserved [xml] prefix. *)
 #push-options "--z3rlimit 400 --fuel 4 --ifuel 4"
 let lemma_pi_target_accept_pi () : Lemma (is_pi_target "pi" == true)
   = assert_norm (is_pi_target "pi" == true)
 #pop-options
+
 
 (** The reserved target [xml] (lowercase) is rejected: the reserved prefix
     forces the [not] conjunct to [false]. *)
@@ -273,11 +315,13 @@ let lemma_pi_target_reject_xml () : Lemma (is_pi_target "xml" == false)
   = assert_norm (is_the_xml_target "xml" == true)
 #pop-options
 
+
 (** The reserved target [XML] (uppercase) is rejected. *)
 #push-options "--z3rlimit 200"
 let lemma_pi_target_reject_XML () : Lemma (is_pi_target "XML" == false)
   = assert_norm (is_the_xml_target "XML" == true)
 #pop-options
+
 
 (** The reserved target [Xml] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
@@ -285,11 +329,13 @@ let lemma_pi_target_reject_Xml () : Lemma (is_pi_target "Xml" == false)
   = assert_norm (is_the_xml_target "Xml" == true)
 #pop-options
 
+
 (** The reserved target [xMl] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
 let lemma_pi_target_reject_xMl () : Lemma (is_pi_target "xMl" == false)
   = assert_norm (is_the_xml_target "xMl" == true)
 #pop-options
+
 
 (** The reserved target [xmL] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
@@ -297,11 +343,13 @@ let lemma_pi_target_reject_xmL () : Lemma (is_pi_target "xmL" == false)
   = assert_norm (is_the_xml_target "xmL" == true)
 #pop-options
 
+
 (** The reserved target [xML] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
 let lemma_pi_target_reject_xML () : Lemma (is_pi_target "xML" == false)
   = assert_norm (is_the_xml_target "xML" == true)
 #pop-options
+
 
 (** The reserved target [XmL] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
@@ -309,13 +357,16 @@ let lemma_pi_target_reject_XmL () : Lemma (is_pi_target "XmL" == false)
   = assert_norm (is_the_xml_target "XmL" == true)
 #pop-options
 
+
 (** The reserved target [XMl] (mixed case) is rejected. *)
 #push-options "--z3rlimit 200"
 let lemma_pi_target_reject_XMl () : Lemma (is_pi_target "XMl" == false)
   = assert_norm (is_the_xml_target "XMl" == true)
 #pop-options
 
+
 (** Entity references *)
+
 
 (** [&amp;] → U+0026 ampersand. *)
 let entity_amp : codec byte =
@@ -323,11 +374,13 @@ let entity_amp : codec byte =
        (fun (b: byte) -> if b = 0x26uy then Some () else None)
        (bytes [0x26uy; 0x61uy; 0x6Duy; 0x70uy; 0x3Buy])
 
+
 (** [&lt;] → U+003C less-than. *)
 let entity_lt : codec byte =
   map_ (fun (_: unit) -> Some 0x3Cuy)
        (fun (b: byte) -> if b = 0x3Cuy then Some () else None)
        (bytes [0x26uy; 0x6Cuy; 0x74uy; 0x3Buy])
+
 
 (** [&gt;] → U+003E greater-than. *)
 let entity_gt : codec byte =
@@ -335,11 +388,13 @@ let entity_gt : codec byte =
        (fun (b: byte) -> if b = 0x3Euy then Some () else None)
        (bytes [0x26uy; 0x67uy; 0x74uy; 0x3Buy])
 
+
 (** [&quot;] → U+0022 quotation mark. *)
 let entity_quot : codec byte =
   map_ (fun (_: unit) -> Some 0x22uy)
        (fun (b: byte) -> if b = 0x22uy then Some () else None)
        (bytes [0x26uy; 0x71uy; 0x75uy; 0x6Fuy; 0x74uy; 0x3Buy])
+
 
 (** [&apos;] → U+0027 apostrophe. *)
 let entity_apos : codec byte =
@@ -347,9 +402,11 @@ let entity_apos : codec byte =
        (fun (b: byte) -> if b = 0x27uy then Some () else None)
        (bytes [0x26uy; 0x61uy; 0x70uy; 0x6Fuy; 0x73uy; 0x3Buy])
 
+
 (** Entity roundtrip lemmas (XML 1.0 §4.6), proven via the transparent
     [.enc]/[.dec] fields + [lemma_bytes_self_prefix_spec] rather than the
     opaque [map_] [.roundtrip] field (fstar-proofs §15/§18). *)
+
 
 (** [&amp;] → [&] roundtrip. *)
 #push-options "--z3rlimit 400"
@@ -361,6 +418,7 @@ let lemma_entity_amp_roundtrip () : Lemma
     ()
 #pop-options
 
+
 (** [&lt;] → [<] roundtrip. *)
 #push-options "--z3rlimit 400"
 let lemma_entity_lt_roundtrip () : Lemma
@@ -370,6 +428,7 @@ let lemma_entity_lt_roundtrip () : Lemma
     lemma_bytes_self_prefix_spec [0x26uy; 0x6Cuy; 0x74uy; 0x3Buy] Seq.empty;
     ()
 #pop-options
+
 
 (** [&gt;] → [>] roundtrip. *)
 #push-options "--z3rlimit 400"
@@ -381,6 +440,7 @@ let lemma_entity_gt_roundtrip () : Lemma
     ()
 #pop-options
 
+
 (** [&quot;] → ["] roundtrip. *)
 #push-options "--z3rlimit 400"
 let lemma_entity_quot_roundtrip () : Lemma
@@ -390,6 +450,7 @@ let lemma_entity_quot_roundtrip () : Lemma
     lemma_bytes_self_prefix_spec [0x26uy; 0x71uy; 0x75uy; 0x6Fuy; 0x74uy; 0x3Buy] Seq.empty;
     ()
 #pop-options
+
 
 (** [&apos;] → ['] roundtrip. *)
 #push-options "--z3rlimit 400"
@@ -401,6 +462,7 @@ let lemma_entity_apos_roundtrip () : Lemma
     ()
 #pop-options
 
+
 (* ────────────────────────────────────────────────────────────────────────
    Entity reference choice — [one_of] over the five predefined entities.
 
@@ -410,6 +472,7 @@ let lemma_entity_apos_roundtrip () : Lemma
    literal with [bytes_decode] in order; a wrong literal fails ([Inl]) and the
    search continues until the target literal's self-prefix matches.
    ──────────────────────────────────────────────────────────────────────── *)
+
 
 (* ========================================================================
    Character references (XML 1.0 §4.1) — [&#DDD;] and [&#xHHH;].
@@ -422,10 +485,12 @@ let lemma_entity_apos_roundtrip () : Lemma
    [mk_char] with the exact [char_code] bound (fstar-proofs §46).
    ======================================================================== *)
 
+
 (** True iff [cp] is a Unicode scalar value representable in [FStar.Char.char]
     (the [char_code] bound: [[0, 0xD7FF] ∪ [0xE000, 0x10FFFF]]). *) 
 let is_valid_cp (cp: int) : bool =
   (cp >= 0 && cp < 0xD7FF) || (cp >= 0xE000 && cp <= 0x10FFFF)
+
 
 (** [mk_xml_char cp] — the REC [2] [Char] validity gate: [is_xml_cp] AND the
     [mk_char] scalar bound, returning the [char] only when both hold.  This
@@ -437,6 +502,7 @@ let is_valid_cp (cp: int) : bool =
     so [mk_char] inside is only the redundant scalar bound. *)
 let mk_xml_char (cp: int) : option FStar.Char.char =
   if is_xml_cp cp then mk_char cp else None
+
 
 (* ========================================================================
    [is_xml_char] accept + reject lemmas (finding M1 / task 1.3–1.4).
@@ -451,11 +517,13 @@ let mk_xml_char (cp: int) : option FStar.Char.char =
    [let rec] scanner.
    ======================================================================== *)
 
+
 (** [is_xml_char] accepts TAB (#x9). *)
 let lemma_is_xml_char_tab () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0x9))
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0x9) == 0x9);
     assert_norm (is_xml_cp 0x9)
+
 
 (** [is_xml_char] accepts LF (#xA). *)
 let lemma_is_xml_char_lf () : Lemma
@@ -463,11 +531,13 @@ let lemma_is_xml_char_lf () : Lemma
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xA) == 0xA);
     assert_norm (is_xml_cp 0xA)
 
+
 (** [is_xml_char] accepts CR (#xD). *)
 let lemma_is_xml_char_cr () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0xD))
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xD) == 0xD);
     assert_norm (is_xml_cp 0xD)
+
 
 (** [is_xml_char] accepts [A] (U+0041). *)
 let lemma_is_xml_char_a () : Lemma
@@ -475,11 +545,13 @@ let lemma_is_xml_char_a () : Lemma
   = assert (FStar.Char.int_of_char 'A' == 0x41);
     assert_norm (is_xml_cp 0x41)
 
+
 (** [is_xml_char] rejects the control character #x1. *)
 let lemma_is_xml_char_reject_1 () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0x1) == false)
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0x1) == 0x1);
     assert_norm (is_xml_cp 0x1 == false)
+
 
 (** [is_xml_char] rejects the control character #x8. *)
 let lemma_is_xml_char_reject_8 () : Lemma
@@ -487,11 +559,13 @@ let lemma_is_xml_char_reject_8 () : Lemma
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0x8) == 0x8);
     assert_norm (is_xml_cp 0x8 == false)
 
+
 (** [is_xml_char] rejects the control character #xB. *)
 let lemma_is_xml_char_reject_b () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0xB) == false)
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xB) == 0xB);
     assert_norm (is_xml_cp 0xB == false)
+
 
 (** [is_xml_char] rejects the control character #xC. *)
 let lemma_is_xml_char_reject_c () : Lemma
@@ -499,11 +573,13 @@ let lemma_is_xml_char_reject_c () : Lemma
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xC) == 0xC);
     assert_norm (is_xml_cp 0xC == false)
 
+
 (** [is_xml_char] rejects the control character #xE. *)
 let lemma_is_xml_char_reject_e () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0xE) == false)
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xE) == 0xE);
     assert_norm (is_xml_cp 0xE == false)
+
 
 (** [is_xml_char] rejects the noncharacter #xFFFE. *)
 let lemma_is_xml_char_reject_fffe () : Lemma
@@ -511,11 +587,13 @@ let lemma_is_xml_char_reject_fffe () : Lemma
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xFFFE) == 0xFFFE);
     assert_norm (is_xml_cp 0xFFFE == false)
 
+
 (** [is_xml_char] rejects the noncharacter #xFFFF. *)
 let lemma_is_xml_char_reject_ffff () : Lemma
   (ensures is_xml_char (FStar.Char.char_of_int 0xFFFF) == false)
   = assert (FStar.Char.int_of_char (FStar.Char.char_of_int 0xFFFF) == 0xFFFF);
     assert_norm (is_xml_cp 0xFFFF == false)
+
 
 (** [is_xml_char] rejects the surrogate U+D800 at the code-point level
     (already false via the [#xD800-#xDFFF] gap in the [Char] bounds; a
@@ -530,6 +608,7 @@ let lemma_is_xml_char_reject_surrogate () : Lemma
     U+10FFFF is 7 hex digits / 7 decimal digits; 10 bounds both comfortably. *)
 let xml_max_charref_len : pos = 10
 
+
 (** Lemma: every [FStar.Char.char] code point is a valid scalar ([is_valid_cp]).
     Follows from the [char_code] type bound ([< 0xd7ff] or [0xe000..0x10ffff],
     fstar-proofs §46), which is definitionally [is_valid_cp] plus the
@@ -541,12 +620,14 @@ let lemma_valid_cp_of_char (c: FStar.Char.char) : Lemma
     FStar.Char.char_of_u32_of_char c;
     assert (cp < 0xD7FF \/ (cp >= 0xE000 /\ cp <= 0x10FFFF))
 
+
 (** Lemma: [mk_char] roundtrips every [char] (its code point is valid, so
     [char_of_int] reconstructs it — the [char_of_u32_of_char] primitive). *)
 let lemma_mk_char_of_char (c: FStar.Char.char) : Lemma
   (mk_char (FStar.Char.int_of_char c) == Some c)
   = FStar.Char.char_of_u32_of_char c;
     ()
+
 
 (** Decimal character reference: [&#DDD;] → code point (XML 1.0 §4.1).
 
@@ -562,12 +643,15 @@ let char_ref_decimal : codec char =
     (fun (c: char) -> Some (FStar.Char.int_of_char c))
     (between (text "&#") (byte_val 0x3Buy) (digits_to_int xml_max_charref_len is_valid_cp))
 
+
 (* --- Hexadecimal digit codec (base-16 analogue of [digits_to_int]). --- *)
+
 
 (** True iff [b] is a hexadecimal digit (0-9, A-F, a-f). *)
 let is_hex_digit (b: byte) : bool =
   let v = U8.v b in
   (0x30 <= v && v <= 0x39) || (0x41 <= v && v <= 0x46) || (0x61 <= v && v <= 0x66)
+
 
 (** The numeric value of a hexadecimal digit (0-15). *)
 let hex_digit_value (b: byte) : int =
@@ -576,23 +660,28 @@ let hex_digit_value (b: byte) : int =
   else if 0x41 <= v && v <= 0x46 then v - 0x41 + 10
   else v - 0x61 + 10
 
+
 (** The lowercase hexadecimal digit byte for [d < 16]. *)
 let hex_digit_byte (d: nat{d < 16}) : byte =
   if d < 10 then U8.uint_to_t (0x30 + d) else U8.uint_to_t (0x61 + d - 10)
+
 
 (** Encode a nat to its lowercase hexadecimal digit list (no leading zeros). *)
 let rec hex_digits_encode (n: nat) : Tot (list byte) (decreases n) =
   if n < 16 then [hex_digit_byte n]
   else hex_digits_encode (n / 16) @ [hex_digit_byte (n % 16)]
 
+
 (** True iff every byte is a hexadecimal digit. *)
 let all_hex_digits (ds: list byte) : bool = List.Tot.for_all is_hex_digit ds
+
 
 (** Accumulate the integer value of a hex-digit list, base 16, left-to-right. *)
 let rec acc_hex (ds: list byte) (a: int) : Tot int (decreases ds) =
   match ds with
   | [] -> a
   | d :: tl -> acc_hex tl (a * 16 + hex_digit_value d)
+
 
 (** Bounded greedy hex-digit scanner (mirrors [digits_to_int_decode_go]). *)
 let rec hex_decode_go (s: byte_seq) (k: nat) (a: int) (i: nat)
@@ -605,9 +694,11 @@ let rec hex_decode_go (s: byte_seq) (k: nat) (a: int) (i: nat)
       else if i = 0 then Inl (mk_decode_error ExpectedPredicate 0)
       else Inr (a, i)
 
+
 (** Decode a hex-digit run to an integer, bounded by [max_len] digits. *)
 let hex_decode (max_len: nat) (s: byte_seq) : decode_result int =
   hex_decode_go s max_len 0 0
+
 
 (** [acc_hex] distributes over append. *)
 let rec lemma_acc_hex_append (ds1 ds2: list byte) (a: int) : Lemma
@@ -616,6 +707,7 @@ let rec lemma_acc_hex_append (ds1 ds2: list byte) (a: int) : Lemma
   = match ds1 with
     | [] -> ()
     | d :: tl -> lemma_acc_hex_append tl ds2 (a * 16 + hex_digit_value d)
+
 
 (** [acc_hex] of the canonical hex encoding of [n] is [n]. *)
 let rec lemma_acc_hex_encode (n: nat) : Lemma
@@ -630,6 +722,7 @@ let rec lemma_acc_hex_encode (n: nat) : Lemma
       ()
     end
 
+
 (** [all_hex_digits] distributes over append. *)
 let rec lemma_all_hex_digits_append (ds1 ds2: list byte) : Lemma
   (ensures all_hex_digits (ds1 @ ds2) == (all_hex_digits ds1 && all_hex_digits ds2))
@@ -637,6 +730,7 @@ let rec lemma_all_hex_digits_append (ds1 ds2: list byte) : Lemma
   = match ds1 with
     | [] -> ()
     | d :: tl -> lemma_all_hex_digits_append tl ds2
+
 
 (** Every byte of a canonical hex encoding is a hex digit. *)
 let rec lemma_all_hex_digits_encode (n: nat) : Lemma
@@ -650,6 +744,7 @@ let rec lemma_all_hex_digits_encode (n: nat) : Lemma
       lemma_all_hex_digits_append (hex_digits_encode n_div) [d];
       ()
     end
+
 
 (** Shift lemma: decoding from offset [i] on a hex-digit prefix equals
     decoding the suffix slice from 0 (offset-shifted result).  Mirrors
@@ -677,6 +772,7 @@ let rec lemma_hex_decode_shift (s: byte_seq) (k: nat) (i: nat) (a: int) : Lemma
       end else ()
     end else ()
 #pop-options
+
 
 (** Process a concrete hex-digit list through the decoder (mirrors
     [Data.Codec.Types.lemma_digits_process_list]). *)
@@ -724,6 +820,7 @@ let rec lemma_hex_process_list (ds: list byte) (r: byte_seq) (k: nat) (a: int) :
       ()
 #pop-options
 
+
 (** Hex digit roundtrip: the canonical hex encoding of [n] decodes to [n]. *)
 #push-options "--z3rlimit 400"
 let lemma_hex_decode_encode_roundtrip (max_len: nat) (n: nat) (r: byte_seq) : Lemma
@@ -737,6 +834,7 @@ let lemma_hex_decode_encode_roundtrip (max_len: nat) (n: nat) (r: byte_seq) : Le
            == Inr (n, List.Tot.length (hex_digits_encode n)))
   = lemma_hex_process_list (hex_digits_encode n) r max_len 0
 #pop-options
+
 
 (** Error-position + consumed bound for the hex decoder ([hex_decode_go]).
     Decoding from offset [i] (with [i <= Seq.length s]) never returns an
@@ -762,12 +860,14 @@ let rec lemma_hex_decode_go_len_bound (s: byte_seq) (k: nat) (a: int) (i: nat) :
     end
 #pop-options
 
+
 (** Error-position bound for [hex_decode]. *)
 #push-options "--z3rlimit 200"
 let lemma_hex_dec_err_bound (max_len: nat) (s: byte_seq) : Lemma
   (ensures (match hex_decode max_len s with Inl err -> err.err_pos <= Seq.length s | _ -> True))
   = lemma_hex_decode_go_len_bound s max_len 0 0
 #pop-options
+
 
 (** Consumed-count bound for [hex_decode]. *)
 #push-options "--z3rlimit 200"
@@ -776,10 +876,12 @@ let lemma_hex_dec_consumed_bound (max_len: nat) (s: byte_seq) : Lemma
   = lemma_hex_decode_go_len_bound s max_len 0 0
 #pop-options
 
+
 (** Well-formed value for [hex_digits_to_int]: [v] satisfies [f], is
     non-negative, and its canonical hex encoding is at most [max_len] digits. *)
 let hex_digits_wfcv (max_len: pos) (f: int -> bool) (v: int) : bool =
   f v && v >= 0 && List.Tot.length (hex_digits_encode (nat_of_int v)) <= max_len
+
 
 (** Suffix condition for [hex_digits_to_int]: the encoded run fills the bound,
     or the suffix is empty, or the next byte is not a hex digit. *)
@@ -788,6 +890,7 @@ let hex_digits_rest_cond (max_len: pos) (f: int -> bool) (v: int) (r: byte_seq) 
   List.Tot.length (hex_digits_encode n_val) = max_len \/
   Seq.length r = 0 \/
   (Seq.length r > 0 /\ not (is_hex_digit (Seq.index r 0)))
+
 
 (** Roundtrip for [hex_digits_to_int] (the [custom] signature): a well-formed
     value encodes and decodes to itself, consuming exactly the encoded length. *)
@@ -808,6 +911,7 @@ let lemma_hex_digits_roundtrip (max_len: pos) (f: int -> bool) (v: int) (r: byte
     ()
 #pop-options
 
+
 (** [hex_digits_to_int] — a bounded-greedy base-16 integer codec (the hex
     analogue of [digits_to_int], fstar-proofs §43), built via [custom] so its
     roundtrip is the explicit [lemma_hex_digits_roundtrip] rather than
@@ -823,6 +927,7 @@ let hex_digits_to_int (max_len: pos) (f: int -> bool) : codec int =
     (lemma_hex_dec_err_bound max_len)
     (lemma_hex_dec_consumed_bound max_len)
 
+
 (** Hexadecimal character reference: [&#xHHH;] → code point (XML 1.0 §4.1).
 
     Composes [hex_digits_to_int] inside the [&#x] … [;] markers via [between],
@@ -834,10 +939,12 @@ let char_ref_hex : codec char =
     (fun (c: char) -> Some (FStar.Char.int_of_char c))
     (between (text "&#x") (byte_val 0x3Buy) (hex_digits_to_int xml_max_charref_len is_valid_cp))
 
+
 (* ========================================================================
    Character-reference roundtrip + rejection lemmas (concrete vectors,
    fstar-proofs §47 path (b)).
    ======================================================================== *)
+
 
 (** [&#65;] decodes to [A] (U+0041) and roundtrips.
 
@@ -856,6 +963,7 @@ let lemma_char_ref_decimal_roundtrip () : Lemma
            == Inr ('A', Seq.length (char_ref_decimal.enc 'A')))
   = ()
 #pop-options
+
 
 (** [&#x41;] decodes to [A] (U+0041) and roundtrips.
 
@@ -881,6 +989,7 @@ let lemma_char_ref_hex_roundtrip () : Lemma
     ()
 #pop-options
 
+
 (** A surrogate code point (U+D800 = 55296) is rejected at the [mk_char] gate
     ([is_valid_cp 55296 == false] — the code-point-bound soundness property,
     fstar-proofs §46). *)
@@ -890,6 +999,7 @@ let lemma_char_ref_reject_surrogate () : Lemma
   = assert_norm (is_valid_cp 55296 == false)
 #pop-options
 
+
 (** An above-max code point (U+110000 = 1114112) is rejected at the [mk_char]
     gate ([is_valid_cp 1114112 == false]). *)
 #push-options "--z3rlimit 200"
@@ -898,7 +1008,9 @@ let lemma_char_ref_reject_above_max () : Lemma
   = assert_norm (is_valid_cp 1114112 == false)
 #pop-options
 
+
 (** Quotes *)
+
 
 (** Double quote (0x22). *)
 let dquote : codec unit = byte_val 0x22uy
@@ -927,13 +1039,16 @@ let dquote : codec unit = byte_val 0x22uy
    has no suffix constraint).
    ======================================================================== *)
 
+
 (** The byte predicate distinguishing hex ([x]) from decimal ([0-9]). *)
 let is_hex_marker (b: byte) : bool = U8.v b = 0x78
+
 
 (** Hex digit run after the [x] ([xHHH], no [;&#]): [x] + hex digits, as an
     [int] code point. *)
 let char_ref_hex_tail : codec int =
   then_drop (byte_val 0x78uy) (hex_digits_to_int xml_max_charref_len is_valid_cp)
+
 
 (** [char_ref] — a character reference ([&#DDD;] or [&#xHHH;]) as a [char].
 
@@ -950,6 +1065,7 @@ let char_ref : codec char =
       (alt char_ref_hex_tail
         (digits_to_int xml_max_charref_len is_valid_cp)
         is_hex_marker))
+
 
 (** [&#65;] decodes to [A] (U+0041) via [char_ref] and roundtrips.
 
@@ -972,6 +1088,7 @@ let lemma_char_ref_roundtrip () : Lemma
     ()
 #pop-options
 
+
 (** A truncated decimal character reference ([&#65], missing the terminating
     [;]) is rejected by [char_ref.dec] (the [between] combinator requires the
     [;] byte after the digit run — finding M4 / task 2.3). *)
@@ -981,6 +1098,7 @@ let lemma_char_ref_reject_missing_semi () : Lemma
             | Inl _ -> True | Inr _ -> False))
   = ()
 #pop-options
+
 
 (** A truncated hexadecimal character reference ([&#x], an empty hex run) is
     rejected by [char_ref.dec] (the [hex_digits_to_int] decoder requires at
@@ -992,8 +1110,10 @@ let lemma_char_ref_reject_empty_hex () : Lemma
   = ()
 #pop-options
 
+
 (* ────────────────────────────────────────────────────────────────────────
    [text_char] — a single [Char] production. *)
+
 
 (** A literal [text_char] byte: ASCII, a valid REC [2] [Char] code point
     ([is_xml_char] — rejects the controls [#x0-#x8]/[#xB]/[#xC]/[#xE-#x1F]),
@@ -1004,6 +1124,7 @@ let lemma_char_ref_reject_empty_hex () : Lemma
 let is_text_char_literal (b: byte) : bool =
   let v = U8.v b in
   v < 0x80 && v <> 0x3C && v <> 0x26 && is_xml_cp v
+
 
 (** Entity bodies WITHOUT the leading [&]: [(value, "name;")] in decoder
     order — the SINGLE source of truth for the five predefined entities
@@ -1020,24 +1141,31 @@ let entity_body_pairs : list (byte & list byte) =
     (0x22uy, [0x71uy;0x75uy;0x6Fuy;0x74uy;0x3Buy]);      (* quot; *)
     (0x27uy, [0x61uy;0x70uy;0x6Fuy;0x73uy;0x3Buy]) ]     (* apos; *)
 
+
 (** [entity_body] encoder: the literal of the first pair keyed by [v]. *)
 let entity_body_enc (v: byte) : byte_seq = one_of_enc entity_body_pairs v
+
 
 (** [entity_body] decoder: the value of the first matching literal. *)
 let entity_body_dec (s: byte_seq) : decode_result byte = one_of_dec entity_body_pairs s
 
+
 (** [entity_body] well-formedness: [v] keys some pair. *)
 let entity_body_wfcv (v: byte) : bool = one_of_mem entity_body_pairs v
+
 
 (** [entity_body] well-formed proposition. *)
 let entity_body_wfcv_prop (v: byte) : prop = True
 
+
 (** [entity_body] suffix condition ([True] — terminated literals). *)
 let entity_body_rest_cond (v: byte) (r: byte_seq) : prop = True
+
 
 (** The five concrete values an entity body can resolve to. *)
 let entity_body_mem_cases (v: byte) : prop =
   v = 0x26uy \/ v = 0x3Cuy \/ v = 0x3Euy \/ v = 0x22uy \/ v = 0x27uy
+
 
 (** Lemma: [entity_body_wfcv v] implies the five-way disjunction. *)
 let lemma_entity_body_mem_cases (v: byte) : Lemma
@@ -1045,12 +1173,26 @@ let lemma_entity_body_mem_cases (v: byte) : Lemma
   (ensures entity_body_mem_cases v)
   = ()
 
+
 (** The literal lists for the five entity bodies (single source of truth). *)
 let e_body_amp  : list byte = [0x61uy;0x6Duy;0x70uy;0x3Buy]
+
+
+(** [e_body_lt] — the literal list for [lt;] (less-than entity body). *)
 let e_body_lt   : list byte = [0x6Cuy;0x74uy;0x3Buy]
+
+
+(** [e_body_gt] — the literal list for [gt;] (greater-than entity body). *)
 let e_body_gt   : list byte = [0x67uy;0x74uy;0x3Buy]
+
+
+(** [e_body_quot] — the literal list for [quot;] (quotation entity body). *)
 let e_body_quot : list byte = [0x71uy;0x75uy;0x6Fuy;0x74uy;0x3Buy]
+
+
+(** [e_body_apos] — the literal list for [apos;] (apostrophe entity body). *)
 let e_body_apos : list byte = [0x61uy;0x70uy;0x6Fuy;0x73uy;0x3Buy]
+
 
 (** Roundtrip for [entity_body]: each value encodes to its body literal and
     roundtrips (§4.6).  The [&] prefix is factored out of [entity_ref]
@@ -1085,6 +1227,7 @@ let lemma_entity_body_roundtrip (v: byte) (r: byte_seq) : Lemma
     end
 #pop-options
 
+
 (** Error-position bound for [entity_body_dec] (finding N1).
 
     [entity_body_dec] is [one_of_dec entity_body_pairs], i.e. a chain of
@@ -1102,6 +1245,7 @@ let lemma_entity_body_dec_err_bound (s: byte_seq) : Lemma
   (ensures (match entity_body_dec s with Inl err -> err.err_pos <= Seq.length s | _ -> True))
   = ()
 
+
 (** Consumed-count bound for [entity_body_dec] (finding N1).
 
     A SUCCESSFUL [one_of_dec] returns [n = List.Tot.length lit] for the first
@@ -1114,6 +1258,7 @@ let lemma_entity_body_dec_consumed_bound (s: byte_seq) : Lemma
   (ensures (match entity_body_dec s with Inr (_, n) -> n <= Seq.length s | _ -> True))
   = ()
 
+
 (** [entity_body] — the five predefined entities WITHOUT the [&] prefix
     ([amp;]|[lt;]|[gt;]|[quot;]|[apos;]) as a [byte]. *)
 let entity_body : codec byte =
@@ -1123,6 +1268,7 @@ let entity_body : codec byte =
     (fun v r -> lemma_entity_body_roundtrip v r)
     lemma_entity_body_dec_err_bound
     lemma_entity_body_dec_consumed_bound
+
 
 (** [entity_ref] — the choice over the five predefined entity references
     ([&amp;]|[&lt;]|[&gt;]|[&quot;]|[&apos;]), factored as the [&] prefix
@@ -1134,9 +1280,11 @@ let entity_body : codec byte =
     opaque [map_]/[product] fields (§15/§18). *)
 let entity_ref : codec byte = then_drop (byte_val 0x26uy) entity_body
 
+
 (** [entity_ref] encoder: the [&] prefix (1 byte) plus the body literal. *)
 let entity_enc (v: byte) : byte_seq =
   Seq.append (Seq.create 1 0x26uy) (entity_body_enc v)
+
 
 (** [entity_ref] decoder: the [&] prefix (1 byte) then the [entity_body]
     literal.  The body error position is shifted by the consumed prefix. *)
@@ -1147,8 +1295,10 @@ let entity_dec (s: byte_seq) : decode_result byte =
     | Inr (v, n) -> Inr (v, n + 1)
   else Inl (mk_decode_error (ExpectedByte 0x26uy) 0)
 
+
 (** [entity_ref] well-formedness: [v] keys some entity body. *)
 let entity_wfcv (v: byte) : bool = entity_body_wfcv v
+
 
 (** Roundtrip for [entity_ref]: each entity value encodes ([&] + body) and
     roundtrips.  Chains the [&]-prefix algebra ([Seq.create 1 0x26uy]
@@ -1165,6 +1315,7 @@ let lemma_entity_ref_roundtrip (v: byte) (r: byte_seq) : Lemma
     ()
 #pop-options
 
+
 (** [char_ref] body after the [&]: [#] + hex-or-decimal + [;] as a [char]. *)
 let char_ref_hash_body : codec char =
   map_
@@ -1174,6 +1325,7 @@ let char_ref_hash_body : codec char =
       (alt char_ref_hex_tail
         (digits_to_int xml_max_charref_len is_valid_cp)
         is_hex_marker))
+
 
 (** The [&]-family: [&amp;]-style entity or [&#…;] char ref, as a [char].
     The [&] prefix is factored out; [alt] dispatches [#] → char ref vs
@@ -1189,6 +1341,7 @@ let amp_char : codec char =
     (then_drop (byte_val 0x26uy)
       (alt entity_body char_ref_hash_body (fun b -> U8.v b <> 0x23)))
 
+
 (** A literal [text_char] byte mapped to a [char]. *)
 let literal_char : codec char =
   map_
@@ -1197,6 +1350,7 @@ let literal_char : codec char =
       let code = FStar.Char.int_of_char c in
       if code < 0x80 then Some (Data.Codec.char_to_byte c) else None)
     (satisfy is_text_char_literal)
+
 
 (** [text_char] — a single XML [Char] (literal | entity | char ref) as a
     [char].  [alt] dispatches on the first byte: literal (not [&]) vs the
@@ -1210,12 +1364,14 @@ let text_char : codec char =
       else Some (Inr c))
     (alt literal_char amp_char (fun b -> U8.v b <> 0x26))
 
+
 (** [&#65;] and a literal roundtrip via [text_char] (concrete vectors). *)
 #push-options "--z3rlimit 400"
 let lemma_text_char_roundtrip () : Lemma
   (ensures text_char.dec (text_char.enc 'A') == Inr ('A', Seq.length (text_char.enc 'A')))
   = ()
 #pop-options
+
 
 (** [text_char] rejects a REC [2] control byte ([#x1]) on the literal path
     ([is_text_char_literal] is now [is_xml_cp]-gated — finding M1). *)
@@ -1227,6 +1383,7 @@ let lemma_text_char_reject_control () : Lemma
     ()
 #pop-options
 
+
 (** [literal_char] rejects a REC [2] control byte ([#x1]) — the [satisfy]
     gate's [wfcv] is [is_text_char_literal], now [is_xml_cp]-gated. *)
 #push-options "--z3rlimit 200"
@@ -1236,6 +1393,7 @@ let lemma_literal_char_reject_control () : Lemma
   = assert_norm (is_text_char_literal 0x01uy == false);
     ()
 #pop-options
+
 
 (** [char_ref] rejects a decimal reference to a REC [2] control character
     ([&#1;] → U+0001): [mk_xml_char 1 == None] forwards a parse error
@@ -1248,6 +1406,7 @@ let lemma_char_ref_reject_control () : Lemma
     assert_norm (mk_xml_char 1 == None);
     ()
 #pop-options
+
 
 (** A REC [2] noncharacter ([#xFFFE]/[#xFFFF]) is rejected at the [mk_xml_char]
     gate ([is_xml_cp … == false] — the noncharacter exclusion, the [Char]
@@ -1266,3 +1425,4 @@ let lemma_char_ref_reject_noncharacter () : Lemma
     assert_norm (mk_xml_char 0xFFFE == None);
     assert_norm (mk_xml_char 0xFFFF == None)
 #pop-options
+

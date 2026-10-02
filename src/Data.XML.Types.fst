@@ -1,6 +1,7 @@
 (* Copyright 2026 Department of Code LLC.
    SPDX-License-Identifier: AGPL-3.0-or-later *)
 
+
 (**
 Data.XML.Types — XML 1.0 Abstract Syntax Tree.
 
@@ -22,10 +23,13 @@ Copyright 2026 Department of Code LLC. All rights reserved.
 *)
 module Data.XML.Types
 
+
 open FStar.Char
 open FStar.List.Tot
 
+
 (** Name — XML 1.0 §2.3 *)
+
 
 (** [xml_name] — a qualified name: an optional namespace prefix and a
     required local name.  The v0.1 subset encodes [prefix = None] always
@@ -35,10 +39,13 @@ type xml_name = {
   local  : string;
 }
 
+
 (** [mk_name local] — build a plain (unprefixed) name. *)
 let mk_name (local: string) : xml_name = { prefix = None; local = local }
 
+
 (** Attribute — XML 1.0 §3.1 *)
+
 
 (** [xml_attribute] — a name/value pair on an element. *)
 type xml_attribute = {
@@ -46,7 +53,9 @@ type xml_attribute = {
   attr_value : string;
 }
 
+
 (** Node — XML 1.0 §4 *)
+
 
 (** [xml_node] — one node in an element's children.
 
@@ -60,6 +69,7 @@ type xml_node =
   | XmlPI      : target:string -> data:string -> xml_node
   | XmlCDATA   : string -> xml_node
 
+
 (** [xml_element] — an element: a name, a list of attributes, and a list of
     child nodes.  The [xml_node]/[xml_element] pair is mutually recursive;
     the codec breaks the recursion with a fuel-indexed builder. *)
@@ -69,7 +79,9 @@ and xml_element = {
   elt_children   : list xml_node;
 }
 
+
 (** Declaration — XML 1.0 §2.8 *)
+
 
 (** [xml_decl] — an XML declaration: version, optional encoding, and
     optional standalone flag.
@@ -87,15 +99,18 @@ type xml_decl = {
   decl_standalone : option bool;
 }
 
+
 (** Is [c] a VersionNum digit character ([0-9])? *)
 let is_verdigit_char (c: char) : bool =
   let v = FStar.Char.int_of_char c in 0x30 <= v && v <= 0x39
+
 
 (** Is [c] an [EncName] character ([A-Za-z0-9._-])? *)
 let is_encname_char (c: char) : bool =
   let v = FStar.Char.int_of_char c in
   (0x41 <= v && v <= 0x5A) || (0x61 <= v && v <= 0x7A) ||
   (0x30 <= v && v <= 0x39) || v = 0x2E || v = 0x5F || v = 0x2D
+
 
 (** [version_chars_ok cs] — [cs] is a well-formed VersionNum
     ([1. + one-or-more digits], XML 1.0 production [26]).  The leading
@@ -108,6 +123,7 @@ let version_chars_ok (cs: list char) : bool =
     is_verdigit_char dig && for_all is_verdigit_char rest
   | _ -> false
 
+
 (** [encname_chars_ok cs] — [cs] is a well-formed EncName (XML 1.0
     production [81]): one-or-more [A-Za-z0-9._-] characters. *)
 let encname_chars_ok (cs: list char) : bool =
@@ -115,7 +131,9 @@ let encname_chars_ok (cs: list char) : bool =
   | c :: rest -> is_encname_char c && for_all is_encname_char rest
   | [] -> false
 
+
 (** Prolog — XML 1.0 §2.8 *)
+
 
 (** [xml_prolog] — the document prolog: an optional declaration, an optional
     DOCTYPE, and miscellaneous leading comments/PIs.
@@ -135,10 +153,13 @@ type xml_prolog = {
   prolog_misc    : list xml_node;  (* comments and PIs before root *)
 }
 
+
 (** Document — XML 1.0 §2.1 *)
+
 
 (** [xml_document] — a document: a prolog followed by a single root element. *)
 type xml_document = {
   doc_prolog : xml_prolog;
   doc_root   : xml_element;
 }
+

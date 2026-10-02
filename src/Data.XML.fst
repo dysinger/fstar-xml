@@ -1,6 +1,7 @@
 (* Copyright 2026 Department of Code LLC.
    SPDX-License-Identifier: AGPL-3.0-or-later *)
 
+
 (**
 Data.XML — Verified XML 1.0 Parser/Printer (re-exporter)
 
@@ -32,8 +33,10 @@ documents are regression anchors restated in [Data.XML.Test.Element].
 *)
 module Data.XML
 
+
 include Data.XML.Types
 include Data.XML.Token
 include Data.XML.Codec.Wrapped
 include Data.XML.Codec.Prolog
 include Data.XML.Codec
+
