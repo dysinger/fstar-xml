@@ -4,8 +4,6 @@
 (**
 Data.XML.Pulse — C-extractable XML token tag codec via Pulse + Custard.
 
-The Custard-era replacement for the retired KaRaMeL [Data.XML.Low] (which used
-[LowStar.Buffer]/[Stack]; both namespaces were removed from F* >= v2026.09.20).
 A single-byte tag selects the XML token kind — [XT_ElementStart] (0x00),
 [XT_ElementEnd] (0x01), [XT_AttrKey] (0x02), [XT_AttrValue] (0x03),
 [XT_Text] (0x04), [XT_Comment] (0x05), [XT_PI] (0x06), [XT_CDATA] (0x07) —

@@ -4,9 +4,7 @@
 (**
 Data.XML.Types.Pulse — C-extractable XML node tag codec via Pulse + Custard.
 
-The Custard-era replacement for the retired KaRaMeL [Data.XML.Types.Low]
-(which used [LowStar.Buffer]/[Stack]; both namespaces were removed from F*
->= v2026.09.20).  A single-byte tag selects the XML node kind — [XN_Element]
+A single-byte tag selects the XML node kind — [XN_Element]
 (0x00), [XN_Text] (0x01), [XN_Comment] (0x02), [XN_PI] (0x03) — written/read
 through a [Pulse.Lib.Array.array].
 

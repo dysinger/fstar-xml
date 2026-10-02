@@ -59,7 +59,7 @@ record [codec a] combinators (Mandate 22).
   reference content; surrogates and above-max code points are already
   excluded by `is_valid_cp`/`mk_char`.
 - **C extraction.**  The two Pulse modules (token tags, AST node tags)
-  extract to C11 via Custard (no KaRaMeL).
+  extract to C11 via Custard.
 
 ## Wire format
 
