@@ -9,12 +9,12 @@ result-*
 out/
 
 # F* `.checked` cache directory (hand-run `fstar.exe --cache_checked_modules`
-# without `--odir` drops the cache in cwd/ `cache/`).
+# without `--odir` drops the cache in cwd/ `cache/`).  The Makefile and
+# default.nix both pass `--odir`, so this is only for bare hand-runs.
 cache/
 
 # F* `.checked` cache, in case `fstar.exe` is run by hand without `--odir`.
 *.checked
-*.krml
 
 # C compiler artifacts, in case `make` or a hand-run compile drops them in cwd.
 *.o

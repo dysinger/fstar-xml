@@ -48,10 +48,7 @@ FSTAR_FLAGS = --no_default_includes \
 # ── F* verification ───────────────────────────────────────────────
 
 # Source modules in DEPENDENCY ORDER (leaf modules first).
-#
-# Data.XML.Pulse / Data.XML.Types.Pulse are the Custard-era Pulse leaves (the
-# old KaRaMeL Data.XML.Low / Data.XML.Types.Low were deleted with the Low*
-# stdlib in v2026.09.20).
+
 SRC_MODS := Data.XML.Types Data.XML.Token Data.XML.Codec.Wrapped \
             Data.XML.Codec.Prolog Data.XML.Codec Data.XML \
             Data.XML.Pulse Data.XML.Types.Pulse

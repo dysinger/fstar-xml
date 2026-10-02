@@ -1,4 +1,4 @@
-# Data.XML — Verified XML 1.0 Parser/Printer
+# xml — verified XML 1.0 parser/printer
 
 A formally verified XML 1.0 (W3C Fifth Edition) bidirectional parser/printer
 in F*, built on the record-based [Data.Codec] combinator framework.  This is
