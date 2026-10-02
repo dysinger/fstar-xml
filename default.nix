@@ -1,7 +1,7 @@
 # Copyright 2026 Department of Code LLC.
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# fstar-xml — Data.XML verified XML 1.0 codec library.
+# xml — Data.XML verified XML 1.0 codec library.
 #
 # Takes the F* toolchain as concrete derivations (no `pkgs` blob, no overlay
 # assumption, no module-name/order arguments).  Module names and their
@@ -42,7 +42,7 @@
 let
   inherit (stdenv) mkDerivation;
 
-  # Package name.  The repo/flake are "fstar-xml", but the internal
+  # Package name.  The package is "xml" (git repo "fstar-xml"), but the internal
   # derivation/artifact names drop the "fstar-" prefix.
   pname = "xml";
 

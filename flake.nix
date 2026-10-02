@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 {
-  description = "fstar-xml — verified XML codec library";
+  description = "xml — verified XML codec library";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/c31cf09";
@@ -182,7 +182,7 @@
 
         checks.formatting = treefmtModule.config.build.check self;
 
-        # The build targets are named by deliverable (no `fstar-xml-`
+        # The build targets are named by deliverable (no `xml-`
         # prefix); `default` aliases `native` (the C11 shared/static lib).
         packages.default = _pkg.native;
         packages.checked = _pkg.checked;

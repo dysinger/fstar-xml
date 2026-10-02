@@ -1,7 +1,7 @@
 <div align="center">
   <h1>License</h1>
-  <p><strong>fstar-nix-flake-template</strong> — a minimal verified F* project
-  template that extracts to C, Rust, OCaml, and WebAssembly.</p>
+  <p><strong>xml</strong> — a formally verified XML 1.0 codec library
+  written in F\*.</p>
 </div>
 
 ---

@@ -1,4 +1,4 @@
-# fstar-xml — Agent Guide & Handoff
+# xml — Agent Guide & Handoff
 
 `Data.XML` — verified XML 1.0 codec library, extracted from the xeno
 monorepo, built on `Data.Codec` and `Data.Text.Codec`.  F* source is 0-admit.
@@ -10,7 +10,7 @@ This file records the completed Pulse port so the next session resumes cleanly.
    can hang forever.  **Always** run them **detached** and poll the log:
 
    ```bash
-   cd /Users/user/_/fstar-xml
+   cd /Users/user/_/xml
    rm -f /tmp/xml-build.log
    nohup nix build .#checked --print-out-paths --no-link > /tmp/xml-build.log 2>&1 &
    # … poll: tail /tmp/xml-build.log ; ps -p $!
@@ -22,7 +22,7 @@ This file records the completed Pulse port so the next session resumes cleanly.
    it is now cached).
 
 2. **The F\* overlay in `flake.nix` MUST stay byte-identical to
-   `fstar-codec`/`fstar-basen`/`fstar-text`'s.**  Any comment/whitespace change
+   `codec`/`basen`/`text`'s.**  Any comment/whitespace change
    to the `buildPhase`/`installPhase` strings changes the derivation hash and
    forces a full F\* bootstrap.  Do NOT touch those strings.
 
@@ -82,12 +82,12 @@ shape.
 - All pure modules: removed `--split_queries always` from `#push-options`
   (option deleted; F* now emits one SMT query per obligation).
 
-### fstar-text input is a `path:` (NOT yet `github:`)
+### text input is a `path:` (NOT yet `github:`)
 
-`fstar-text` is **not yet published** to GitHub (located at
-`/Users/user/_/fstar-text`, no `origin` remote), so `flake.nix` wires it via
-`fstar-text.url = "path:/Users/user/_/fstar-text"`.  Once `dysinger/fstar-text`
-is pushed, flip to `github:dysinger/fstar-text` and re-lock.  `fstar-codec`
+`text` is **not yet published** to GitHub (located at
+`/Users/user/_/text`, no `origin` remote), so `flake.nix` wires it via
+`text.url = "path:/Users/user/_/text"`.  Once `dysinger/text`
+is pushed, flip to `github:dysinger/fstar-text` and re-lock.  `codec`
 (`github:dysinger/fstar-codec`) IS already published.
 
 ## Architecture (post-port)
@@ -103,7 +103,7 @@ Data.XML.Pulse          — C-extractable token tag codec (Custard)
 Data.XML.Types.Pulse    — C-extractable AST node tag codec (Custard)
 ```
 
-Both Pulse leaves are trivial single-byte tag codecs (mirroring fstar-text's
+Both Pulse leaves are trivial single-byte tag codecs (mirroring text's
 `Data.Text.Codec.Pulse`): a 1-byte tag selects a token/node kind, `encode`/
 `decode` (`A.array U8.t`, `fn`), plus `lemma_roundtrip` (pure),
 `lemma_pulse_roundtrip`, `lemma_pulse_encode_decode_match`.  `Data.XML.Pulse`
@@ -113,11 +113,11 @@ arithmetic.
 
 ## The codec + text dependencies
 
-`fstar-xml` consumes `Data.Codec` from the **published** `dysinger/fstar-codec`
-repo and `Data.Text.Codec.*` from **local** `fstar-text` (flake inputs pinned
+`xml` consumes `Data.Codec` from the **published** `dysinger/codec`
+repo and `Data.Text.Codec.*` from **local** `text` (flake inputs pinned
 in `flake.lock`).  `codec-src`/`text-src` (the flake input trees) provide the
 `.fst` sources for `--include`; `codec-checked`/`text-checked`
-(`fstar-codec.packages.<system>.checked` / `fstar-text.packages.<system>.checked`)
+(`codec.packages.<system>.checked` / `text.packages.<system>.checked`)
 seed the `.checked` cache.
 
 ## Build commands
@@ -132,9 +132,9 @@ nix develop && make check   # dev loop (no nix)
 
 ## Reference
 
-- Canonical references: `../fstar-codec` (the codec, incl. its
-  `Data.Codec.Pulse`), `../fstar-text` (the text codec, incl. its
+- Canonical references: `../codec` (the codec, incl. its
+  `Data.Codec.Pulse`), `../text` (the text codec, incl. its
   `Data.Text.Codec.Pulse` and the downstream-dependency wiring), and
-  `../fstar-basen` (the same downstream-dependency shape, `Data.BaseN.Pulse`).
+  `../basen` (the same downstream-dependency shape, `Data.BaseN.Pulse`).
 - The F\* skill: `~/.pi/agent/skills/fstar/fstar-2026.09.20/SKILL.md`
   (Custard, Pulse idiom, `U8.v`/`U32.v` → `Int.Cast`, the dead-Low\* delta).

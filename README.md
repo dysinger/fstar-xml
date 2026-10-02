@@ -104,8 +104,8 @@ nix build .#fsharp   # .NET library
 - `Data.Text.Codec` — text codec library (`text_chars`, `utf8_string`,
   `Data.Text.Codec.Chars`, `Data.Text.Codec.UTF8`, `Data.Text.Codec.UTF8String`).
 
-Both are consumed from the published `dysinger/fstar-codec` /
-`dysinger/fstar-text` flake inputs (see [flake.nix]).
+Both are consumed from the published `dysinger/codec` /
+`dysinger/text` flake inputs (see [flake.nix]).
 
 ## Normative reference
 
