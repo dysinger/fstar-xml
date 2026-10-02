@@ -18,17 +18,10 @@
     # `dysinger/fstar-codec` GitHub repo (pinned to its HEAD commit in
     # flake.lock).
     fstar-codec.url = "github:dysinger/fstar-codec";
-    # The text dependency (Data.Text.Codec.*).  fstar-text is not yet
-    # published to GitHub, so it is consumed from the local checkout via a
-    # `path:` input (this is the same bootstrapping stage fstar-basen sits at,
-    # unpublished).  Once `dysinger/fstar-text` is pushed, flip this to
-    # `github:dysinger/fstar-text` and re-lock.
-    fstar-text.url = "path:/Users/user/_/fstar-text";
-    # No karamel input.  karamel is an in-tree SUBMODULE of F* that upstream's
-    # .nix/fstar.nix synthesizes (cp -r karamel-src) only to run `make -C
-    # karamel install`, which installs the `krml` binary + headers.  We do not
-    # use krml (fstar.exe + fstar.lib are all our targets consume), so karamel
-    # is dropped entirely and the karamel install step is neutralized.
+    # The text dependency (Data.Text.Codec.*). Consumed from the published
+    # `dysinger/fstar-text` GitHub repo (pinned to its HEAD commit in
+    # flake.lock).
+    fstar-text.url = "github:dysinger/fstar-text";
   };
 
   outputs =

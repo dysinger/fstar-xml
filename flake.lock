@@ -140,13 +140,17 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "narHash": "sha256-HPD/QEAvLrSqGKkUxeLs6+PUF4ppIRLa5ou6SleM8uw=",
-        "path": "/Users/user/_/fstar-text",
-        "type": "path"
+        "lastModified": 1790850004,
+        "narHash": "sha256-W0q9kf1YZ6jt4juBAxJviqoH63Hg88l82flFOIclPl8=",
+        "owner": "dysinger",
+        "repo": "fstar-text",
+        "rev": "c701deebad965ec57aaafd101eaf0d15dfd2604c",
+        "type": "github"
       },
       "original": {
-        "path": "/Users/user/_/fstar-text",
-        "type": "path"
+        "owner": "dysinger",
+        "repo": "fstar-text",
+        "type": "github"
       }
     },
     "fstar_2": {
